@@ -30,10 +30,9 @@
             text-align: center;
         }
 
-        h1 { font-size: 1.8rem; margin-bottom: 5px; }
+        h1 { font-size: 1.8rem; margin-bottom: 5px; color: var(--text-color); }
         .subtitle { font-size: 0.85rem; color: #888; margin-bottom: 30px; }
 
-        /* Tabs de Seleção */
         .tabs {
             display: flex;
             background: #1a1a1a;
@@ -59,7 +58,6 @@
             color: white;
         }
 
-        /* Inputs */
         .input-group {
             margin-bottom: 18px;
             text-align: left;
@@ -117,16 +115,15 @@
 
     <div class="container">
         <h1>Calculadora</h1>
-        <p class="subtitle">Preencha pelo menos 1 nota para ver o resultado</p>
+        <p class="subtitle">Preencha as notas para ver o resultado (Máximo 100 por bimestre)</p>
 
         <div class="tabs">
-            <button class="tab active" onclick="setModo('anual')">Anual</button>
-            <button class="tab" onclick="setModo('semestral')">Semestral</button>
+            <button class="tab active" id="btn-anual" onclick="setModo('anual')">Anual</button>
+            <button class="tab" id="btn-semestral" onclick="setModo('semestral')">Semestral</button>
         </div>
 
         <form id="calcForm">
-            <div id="campos">
-                </div>
+            <div id="campos"></div>
             <button type="button" class="btn-clear" onclick="limpar()">Limpar</button>
         </form>
 
@@ -141,7 +138,6 @@
         const camposDiv = document.getElementById('campos');
         const resDiv = document.getElementById('resultado');
 
-        // Configuração dos períodos
         const config = {
             anual: [
                 { label: '1ª Avaliação (Peso 2)', peso: 2 },
@@ -150,16 +146,17 @@
                 { label: '4ª Avaliação (Peso 3)', peso: 3 }
             ],
             semestral: [
-                { label: '1ª Avaliação (Peso 2)', peso: 2 },
-                { label: '2ª Avaliação (Peso 3)', peso: 3 }
+                { label: '1º Bimestre (Peso 2)', peso: 2 },
+                { label: '2º Bimestre (Peso 3)', peso: 3 }
             ]
         };
 
         function setModo(modo) {
             modoAtual = modo;
-            // Atualiza UI dos botões
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
+            if (modo === 'anual') document.getElementById('btn-anual').classList.add('active');
+            else document.getElementById('btn-semestral').classList.add('active');
+            
             renderizarCampos();
             resDiv.style.display = 'none';
         }
@@ -171,12 +168,11 @@
                 div.className = 'input-group';
                 div.innerHTML = `
                     <label>${item.label}</label>
-                    <input type="number" id="n${index}" placeholder="Digite a nota" min="0" max="100" step="0.1">
+                    <input type="number" id="n${index}" placeholder="Digite a nota (0-100)" min="0" max="100" step="0.1">
                 `;
                 camposDiv.appendChild(div);
             });
 
-            // Adiciona evento de escuta em todos os novos inputs
             document.querySelectorAll('input').forEach(input => {
                 input.addEventListener('input', calcular);
             });
@@ -184,21 +180,27 @@
 
         function calcular() {
             let somaPonderada = 0;
-            let somaPesos = 0;
             let temNota = false;
 
             config[modoAtual].forEach((item, index) => {
-                const val = document.getElementById(`n${index}`).value;
+                const input = document.getElementById(`n${index}`);
+                let val = input.value;
+
                 if (val !== "") {
-                    somaPonderada += parseFloat(val) * item.peso;
-                    somaPesos += item.peso;
+                    let nota = parseFloat(val);
+
+                    // Limite direto de 100 pontos
+                    if (nota > 100) {
+                        nota = 100;
+                        input.value = 100;
+                    }
+
+                    somaPonderada += nota * item.peso;
                     temNota = true;
                 }
             });
 
             if (temNota) {
-                // Cálculo da média: Se faltar nota, calculamos a média parcial baseada apenas nos pesos preenchidos
-                // Ou podemos assumir o divisor total (10 para anual, 5 para semestral) para saber a média real do ano
                 const divisorTotal = modoAtual === 'anual' ? 10 : 5;
                 const mediaFinal = somaPonderada / divisorTotal;
 
@@ -209,8 +211,7 @@
                 if (mediaFinal >= 60) {
                     status.innerHTML = `<span class="status-aprovado">🎉 ALUNO APROVADO</span>`;
                 } else {
-                    const falta = (60 * divisorTotal - somaPonderada) / (divisorTotal - (somaPesos || 0));
-                    status.innerHTML = `<span class="status-reprovado">❌ ABAIXO DA MÉDIA</span>`;
+                    status.innerHTML = `<span class="status-reprovado">❌ ABAIXO DA MÉDIA (60.0)</span>`;
                 }
             } else {
                 resDiv.style.display = 'none';
@@ -222,7 +223,6 @@
             resDiv.style.display = 'none';
         }
 
-        // Inicialização
         renderizarCampos();
     </script>
 </body>
