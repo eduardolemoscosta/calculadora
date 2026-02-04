@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora IFRN - SPP</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --card-bg: #121212;
+            --primary-purple: #8b5cf6;
+            --text-color: #ffffff;
+            --input-bg: #111111;
+            --border-color: #2e2e2e;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+            margin: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.8rem; margin-bottom: 5px; }
+        .subtitle { font-size: 0.85rem; color: #888; margin-bottom: 30px; }
+
+        /* Tabs de Seleção */
+        .tabs {
+            display: flex;
+            background: #1a1a1a;
+            padding: 4px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            cursor: pointer;
+            border-radius: 10px;
+            border: none;
+            background: transparent;
+            color: #aaa;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+
+        .tab.active {
+            background-color: var(--primary-purple);
+            color: white;
+        }
+
+        /* Inputs */
+        .input-group {
+            margin-bottom: 18px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            color: #eee;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: white;
+            box-sizing: border-box;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input:focus { border-color: var(--primary-purple); }
+
+        .btn-clear {
+            margin-top: 15px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: #888;
+            padding: 10px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        #resultado {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 15px;
+            background: #161616;
+            border: 1px solid var(--primary-purple);
+            display: none;
+            animation: fadeIn 0.4s;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .status-aprovado { color: #4ade80; font-weight: bold; }
+        .status-reprovado { color: #f87171; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Calculadora</h1>
+        <p class="subtitle">Preencha pelo menos 1 nota para ver o resultado</p>
+
+        <div class="tabs">
+            <button class="tab active" onclick="setModo('anual')">Anual</button>
+            <button class="tab" onclick="setModo('semestral')">Semestral</button>
+        </div>
+
+        <form id="calcForm">
+            <div id="campos">
+                </div>
+            <button type="button" class="btn-clear" onclick="limpar()">Limpar</button>
+        </form>
+
+        <div id="resultado">
+            <h2 id="mediaTexto" style="margin: 0 0 10px 0;">Média: 0.0</h2>
+            <div id="statusTexto"></div>
+        </div>
+    </div>
+
+    <script>
+        let modoAtual = 'anual';
+        const camposDiv = document.getElementById('campos');
+        const resDiv = document.getElementById('resultado');
+
+        // Configuração dos períodos
+        const config = {
+            anual: [
+                { label: '1ª Avaliação (Peso 2)', peso: 2 },
+                { label: '2ª Avaliação (Peso 2)', peso: 2 },
+                { label: '3ª Avaliação (Peso 3)', peso: 3 },
+                { label: '4ª Avaliação (Peso 3)', peso: 3 }
+            ],
+            semestral: [
+                { label: '1ª Avaliação (Peso 2)', peso: 2 },
+                { label: '2ª Avaliação (Peso 3)', peso: 3 }
+            ]
+        };
+
+        function setModo(modo) {
+            modoAtual = modo;
+            // Atualiza UI dos botões
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            renderizarCampos();
+            resDiv.style.display = 'none';
+        }
+
+        function renderizarCampos() {
+            camposDiv.innerHTML = '';
+            config[modoAtual].forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'input-group';
+                div.innerHTML = `
+                    <label>${item.label}</label>
+                    <input type="number" id="n${index}" placeholder="Digite a nota" min="0" max="100" step="0.1">
+                `;
+                camposDiv.appendChild(div);
+            });
+
+            // Adiciona evento de escuta em todos os novos inputs
+            document.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', calcular);
+            });
+        }
+
+        function calcular() {
+            let somaPonderada = 0;
+            let somaPesos = 0;
+            let temNota = false;
+
+            config[modoAtual].forEach((item, index) => {
+                const val = document.getElementById(`n${index}`).value;
+                if (val !== "") {
+                    somaPonderada += parseFloat(val) * item.peso;
+                    somaPesos += item.peso;
+                    temNota = true;
+                }
+            });
+
+            if (temNota) {
+                // Cálculo da média: Se faltar nota, calculamos a média parcial baseada apenas nos pesos preenchidos
+                // Ou podemos assumir o divisor total (10 para anual, 5 para semestral) para saber a média real do ano
+                const divisorTotal = modoAtual === 'anual' ? 10 : 5;
+                const mediaFinal = somaPonderada / divisorTotal;
+
+                resDiv.style.display = 'block';
+                document.getElementById('mediaTexto').innerText = `Média: ${mediaFinal.toFixed(1)}`;
+
+                const status = document.getElementById('statusTexto');
+                if (mediaFinal >= 60) {
+                    status.innerHTML = `<span class="status-aprovado">🎉 ALUNO APROVADO</span>`;
+                } else {
+                    const falta = (60 * divisorTotal - somaPonderada) / (divisorTotal - (somaPesos || 0));
+                    status.innerHTML = `<span class="status-reprovado">❌ ABAIXO DA MÉDIA</span>`;
+                }
+            } else {
+                resDiv.style.display = 'none';
+            }
+        }
+
+        function limpar() {
+            document.getElementById('calcForm').reset();
+            resDiv.style.display = 'none';
+        }
+
+        // Inicialização
+        renderizarCampos();
+    </script>
+</body>
+</html>
